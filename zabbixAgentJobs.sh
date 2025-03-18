@@ -158,31 +158,23 @@ configure_epel() {
 
 # Function to install Zabbix repository
 install_repo() {
-    log "Setting up Zabbix repository..."
-    
-    # First configure EPEL to exclude Zabbix packages
-    configure_epel
-    
-    # Determine the correct repository URL based on OS and version
-    local repo_url=""
-    
-    if [[ $OS == *"CentOS"* ]]; then
-        repo_url="https://repo.zabbix.com/zabbix/7.0/centos/${MAJOR_VERSION}/x86_64/zabbix-release-latest-7.0.el${MAJOR_VERSION}.noarch.rpm"
-    elif [[ $OS == *"Red Hat"* ]]; then
-        repo_url="https://repo.zabbix.com/zabbix/7.0/rhel/${MAJOR_VERSION}/x86_64/zabbix-release-latest-7.0.el${MAJOR_VERSION}.noarch.rpm"
-    else
-        # Default to CentOS repository if OS is not identified
-        repo_url="https://repo.zabbix.com/zabbix/7.0/centos/${MAJOR_VERSION}/x86_64/zabbix-release-latest-7.0.el${MAJOR_VERSION}.noarch.rpm"
+    log "Checking if Zabbix repository is already installed..."
+
+    if rpm -q zabbix-release >/dev/null 2>&1; then
+        log "Zabbix repository is already installed. Skipping installation." "INFO"
+        return 0
     fi
-    
-    log "Using repository URL: $repo_url"
-    
-    # Download and install the repository
-    if rpm -Uvh $repo_url; then
-        log "Zabbix repository installed successfully"
+
+    log "Zabbix repository not found. Proceeding with installation..."
+
+    repo_url="https://repo.zabbix.com/zabbix/7.0/rhel/$(rpm -E %rhel)/x86_64/zabbix-release-latest-7.0.el$(rpm -E %rhel).noarch.rpm"
+
+    if dnf install -y "$repo_url"; then
+        log "Zabbix repository installed successfully." "INFO"
+        return 0
     else
-        log "Failed to install Zabbix repository" "ERROR"
-        exit 1
+        log "Failed to install Zabbix repository." "ERROR"
+        return 1
     fi
     
     # Clean dnf cache as per documentation
